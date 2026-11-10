@@ -299,6 +299,10 @@ const esHeic = f => /hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test(f.name || "");
 // Decodifica la foto probando varios caminos (algunos celulares fallan con uno u otro)
 async function decodificar(file){
   if (window.createImageBitmap){
+    // Fotos enormes (p. ej. cámara en modo 50 MP): se decodifican ya reducidas para no agotar la memoria
+    if (file.size > 4*1048576){
+      try { return await createImageBitmap(file, { imageOrientation: "from-image", resizeWidth: MAX_LADO, resizeQuality: "high" }); } catch (e) {}
+    }
     try { return await createImageBitmap(file, { imageOrientation: "from-image" }); } catch (e) {}
     try { return await createImageBitmap(file); } catch (e) {}
   }
