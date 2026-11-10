@@ -4,13 +4,14 @@ Escáner de documentos que funciona en el navegador del celular. Convierte fotos
  
 **👉 Usarlo:** https://recursos-docentes.github.io/miScanner/
 
- ---
+---
  
 ## ✨ Funciones
  
 | | Función | Detalle |
 |---|---|---|
-| 📷 | **Cámara o galería** | Saca una foto o elige varias de la galería y las procesa una por una. |
+| 📷 | **Cámara integrada** | Visor dentro de la página que marca la hoja en vivo y tiene linterna (si el celular la tiene). Si no hay permiso de cámara, usa la cámara del sistema. |
+| 🖼️ | **Galería** | Elige varias fotos existentes y las procesa una por una. |
 | 🎯 | **Detección automática de bordes** | Ubica las 4 esquinas de la hoja apenas se carga la foto. |
 | ✋ | **Ajuste manual** | Las esquinas se arrastran con el dedo, con lupa para mayor precisión. |
 | 📐 | **Corrección de perspectiva** | Endereza la hoja aunque la foto esté sacada en ángulo. |
@@ -60,7 +61,7 @@ Es un único archivo HTML con JavaScript puro. No usa frameworks ni necesita un 
 ## ⚠️ Limitaciones
  
 - Las páginas quedan guardadas **en el navegador del celular** (IndexedDB) hasta tocar **Vaciar**, aunque se cierre o se recargue la página. No se sincronizan entre dispositivos.
-- En celulares con poca memoria, Android puede cerrar la pestaña mientras la cámara está abierta y la foto se pierde. La app lo detecta y lo avisa. Como alternativa, sacar la foto con la cámara del celular y elegirla con **Galería**.
+- La cámara integrada necesita que el navegador tenga permiso de cámara. Si no lo tiene, se abre la cámara del sistema, y en celulares con poca memoria Android puede cerrar la pestaña mientras tanto (la app lo detecta y lo avisa).
 - La detección automática puede fallar con hoja blanca sobre fondo blanco o si la hoja ocupa casi toda la foto. En ese caso, ajustar las esquinas a mano.
 - El OCR funciona mejor con texto impreso que con letra manuscrita.
 - El PDF y el OCR necesitan conexión la primera vez, para descargar las librerías.
