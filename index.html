@@ -95,6 +95,7 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
 .progreso div{height:100%;width:0;background:var(--accent-2);transition:width .2s}
 #aviso{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
 #aviso.ver{opacity:1}
+.banner{background:#fef3c7;color:#78350f;padding:10px 16px;font-size:.88rem;border-bottom:1px solid #fcd34d}
 </style>
 </head>
 <body>
@@ -260,7 +261,7 @@ function renderPaginas(){
         <button title="Eliminar" class="borrar" data-a="del">✕</button>
       </div>`;
     t.querySelector(".acc").addEventListener("click", e => {
-      const a = e.target.closest("button")?.dataset.a; if (!a) return;
+      const bt = e.target.closest("button"), a = bt && bt.dataset.a; if (!a) return;
       const P = est.paginas;
       if (a==="izq") [P[i-1],P[i]] = [P[i],P[i-1]];
       if (a==="der") [P[i+1],P[i]] = [P[i],P[i+1]];
@@ -293,17 +294,38 @@ function siguienteEnCola(){
   const f = est.cola.shift();
   if (f) cargarArchivo(f); else { mostrar("inicio"); renderPaginas(); }
 }
+const URL_HEIC = "https://cdnjs.cloudflare.com/ajax/libs/heic2any/0.0.4/heic2any.min.js";
+const esHeic = f => /hei[cf]/i.test(f.type) || /\.hei[cf]$/i.test(f.name || "");
+// Decodifica la foto probando varios caminos (algunos celulares fallan con uno u otro)
+async function decodificar(file){
+  if (window.createImageBitmap){
+    try { return await createImageBitmap(file, { imageOrientation: "from-image" }); } catch (e) {}
+    try { return await createImageBitmap(file); } catch (e) {}
+  }
+  const url = URL.createObjectURL(file);
+  try { return await cargarImagen(url); } catch (e) {} finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+  // Fotos HEIC (iPhone / algunos Samsung) que el navegador no sabe abrir: se convierten a JPEG
+  if (esHeic(file)){
+    $("#ocupado-msg").textContent = "Convirtiendo foto HEIC…";
+    await cargarScript(URL_HEIC);
+    const jpg = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+    return decodificar(Array.isArray(jpg) ? jpg[0] : jpg);
+  }
+  throw new Error("formato");
+}
 async function cargarArchivo(file){
-  ocupado("Abriendo imagen…");
+  ocupado("Abriendo imagen…"); await respiro();
   try {
-    const url = URL.createObjectURL(file);
-    const img = await cargarImagen(url);
-    let w = img.naturalWidth, h = img.naturalHeight;
+    const img = await decodificar(file);
+    let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    if (!w || !h) throw new Error("vacía");
     const k = Math.min(1, MAX_LADO / Math.max(w,h));
     w = Math.round(w*k); h = Math.round(h*k);
     const c = document.createElement("canvas"); c.width = w; c.height = h;
-    c.getContext("2d").drawImage(img, 0, 0, w, h);
-    URL.revokeObjectURL(url);
+    const cx = c.getContext("2d");
+    if (!cx) throw new Error("memoria");
+    cx.drawImage(img, 0, 0, w, h);
+    if (img.close) img.close();
     est.fuente = c;
     const auto = detectarBordes(c);
     if (auto) est.esq = auto; else esquinasDefecto(0.06);
@@ -311,8 +333,19 @@ async function cargarArchivo(file){
     if (!auto) aviso("No se detectó la hoja: ajustá las esquinas a mano");
     if (est.cola.length) aviso(`Quedan ${est.cola.length} foto(s) más`);
   } catch (e) {
-    libre(); aviso("No se pudo abrir esa imagen."); siguienteEnCola();
+    libre();
+    const tipo = file.type || (file.name || "").split(".").pop() || "desconocido";
+    const mb = (file.size/1048576).toFixed(1);
+    const motivo = e.message === "memoria" ? "el celular se quedó sin memoria"
+      : esHeic(file) ? "no se pudo convertir la foto HEIC (¿hay conexión?)"
+      : "el navegador no reconoce el formato";
+    alertaError(`No se pudo abrir la foto: ${motivo}.\nArchivo: ${tipo}, ${mb} MB.`);
+    siguienteEnCola();
   }
+}
+function alertaError(msg){
+  const a = $("#aviso"); a.style.whiteSpace = "pre-line"; aviso(msg);
+  clearTimeout(tAviso); tAviso = setTimeout(() => { a.classList.remove("ver"); a.style.whiteSpace = ""; }, 7000);
 }
 
 /* ================= recorte con 4 esquinas ================= */
@@ -724,7 +757,7 @@ async function generarPDF(){
 function nombrePDF(){ return ($("#pdf-nombre").value.trim() || hoy()).replace(/[\\/:*?"<>|]+/g,"_"); }
 $("#btn-pdf").onclick = () => {
   $("#pdf-nombre").value = hoy();
-  try { $("#pdf-compartir").hidden = !(navigator.canShare && navigator.canShare({ files:[new File(["x"],"a.pdf",{type:"application/pdf"})] })); } catch { $("#pdf-compartir").hidden = true; }
+  try { $("#pdf-compartir").hidden = !(navigator.canShare && navigator.canShare({ files:[new File(["x"],"a.pdf",{type:"application/pdf"})] })); } catch (e) { $("#pdf-compartir").hidden = true; }
   $("#dlg-pdf").showModal();
 };
 $("#pdf-cerrar").onclick = () => $("#dlg-pdf").close();
@@ -778,7 +811,7 @@ $("#btn-ocr").onclick = async () => {
 };
 $("#txt-copiar").onclick = async () => {
   try { await navigator.clipboard.writeText($("#txt-salida").value); aviso("Texto copiado"); }
-  catch { $("#txt-salida").select(); document.execCommand("copy"); aviso("Texto copiado"); }
+  catch (e) { $("#txt-salida").select(); document.execCommand("copy"); aviso("Texto copiado"); }
 };
 $("#txt-bajar").onclick = () => {
   const b = new Blob([$("#txt-salida").value], { type:"text/plain;charset=utf-8" }), u = URL.createObjectURL(b);
@@ -791,6 +824,15 @@ $("#txt-volver").onclick = () => mostrar("inicio");
 $("#btn-vaciar").onclick = () => { if (confirm("¿Borrar todas las páginas?")) { est.paginas = []; renderPaginas(); } };
 window.addEventListener("beforeunload", e => { if (est.paginas.length) { e.preventDefault(); e.returnValue = ""; } });
 renderPaginas();
+// Navegadores internos de WhatsApp, Instagram, Facebook, etc. suelen bloquear cámara y archivos
+(function(){
+  const ua = navigator.userAgent || "";
+  if (/FBAN|FBAV|Instagram|WhatsApp|Line\/|; wv\)|GSA\//i.test(ua)){
+    const d = document.createElement("div"); d.className = "banner";
+    d.innerHTML = "Para que la cámara funcione bien, abrí esta página en <b>Chrome</b> o <b>Safari</b> (menú ⋮ → «Abrir en el navegador»).";
+    document.querySelector("main").prepend(d);
+  }
+})();
 </script>
 </body>
 </html>
