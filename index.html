@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="miScanner">
+<meta name="apple-mobile-web-app-title" content="MiEscáner">
 <title>MiEscáner</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 14h20l10 10v26H18z' fill='white'/%3E%3Cpath d='M12 32h40' stroke='%23fbbf24' stroke-width='4'/%3E%3C/svg%3E">
 <style>
@@ -95,6 +95,16 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
 .progreso div{height:100%;width:0;background:var(--accent-2);transition:width .2s}
 #aviso{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
 #aviso.ver{opacity:1}
+#v-camara{background:#000}
+.visor{flex:1;position:relative;min-height:0;background:#000}
+.visor video,.visor canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.visor canvas{pointer-events:none}
+.visor-msg{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;padding:6px 14px;border-radius:999px;font-size:.85rem;white-space:nowrap}
+.pie-camara{display:flex;align-items:center;justify-content:space-around;padding:16px 12px calc(16px + env(safe-area-inset-bottom));background:#000}
+.pie-camara button{color:#fff;font-size:1.4rem;width:52px;height:52px;border-radius:50%}
+.pie-camara button.encendido{background:#fbbf24;color:#000}
+.disparador{width:74px!important;height:74px!important;background:#fff!important;box-shadow:0 0 0 4px #000,0 0 0 7px #fff}
+.disparador:active{transform:scale(.92)}
 .error{background:#fee2e2;color:#7f1d1d;border:1px solid #fca5a5;border-radius:12px;padding:12px 40px 12px 14px;margin-bottom:14px;position:relative;font-size:.92rem}
 .error p{margin:0 0 4px;font-weight:600}.error small{opacity:.8;word-break:break-word}
 .error button{position:absolute;top:6px;right:6px;padding:6px 10px;color:inherit}
@@ -157,6 +167,21 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
     <div class="pie">
       <button id="filtro-volver">Volver</button>
       <button class="ok" id="filtro-ok">Guardar página</button>
+    </div>
+  </section>
+ 
+  <!-- CÁMARA EN VIVO -->
+  <section id="v-camara" hidden>
+    <div class="visor">
+      <video id="cam-video" playsinline muted autoplay></video>
+      <canvas id="cam-guia"></canvas>
+      <div class="visor-msg" id="cam-msg">Apuntá a la hoja</div>
+    </div>
+    <div class="pie-camara">
+      <button id="cam-cerrar" title="Cerrar">✕</button>
+      <button id="cam-disparar" class="disparador" title="Sacar foto"></button>
+      <button id="cam-flash" title="Linterna" hidden>⚡</button>
+      <span id="cam-hueco" style="width:52px"></span>
     </div>
   </section>
  
@@ -228,7 +253,7 @@ const est = {
  
 /* ================= utilidades UI ================= */
 function mostrar(v){
-  for (const n of ["inicio","recorte","filtro","texto"]) $("#v-"+n).hidden = n !== v;
+  for (const n of ["inicio","camara","recorte","filtro","texto"]) $("#v-"+n).hidden = n !== v;
   $("#barra").hidden = v !== "inicio";
   window.scrollTo(0,0);
 }
@@ -307,7 +332,83 @@ function cargarImagen(src){
 }
  
 /* ================= entrada de fotos ================= */
-$("#btn-camara").onclick = () => { marcaCamara(true); $("#in-camara").click(); };
+$("#btn-camara").onclick = () => abrirCamara();
+function camaraDelSistema(){ marcaCamara(true); $("#in-camara").click(); }
+ 
+/* ===== cámara dentro de la página: Android no tiene que abrir otra app ni cerrar la pestaña ===== */
+const cam = { stream: null, track: null, timer: 0, linterna: false };
+async function abrirCamara(){
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return camaraDelSistema();
+  try {
+    cam.stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: {
+      facingMode: { ideal: "environment" }, width: { ideal: 3840 }, height: { ideal: 2160 } } });
+  } catch (e) {
+    if (e.name === "NotAllowedError") aviso("Sin permiso para la cámara: se abre la cámara del celular");
+    return camaraDelSistema();
+  }
+  cam.track = cam.stream.getVideoTracks()[0];
+  const v = $("#cam-video"); v.srcObject = cam.stream;
+  mostrar("camara");
+  try { await v.play(); } catch (e) {}
+  // linterna, si el celular la tiene
+  let caps = {}; try { caps = cam.track.getCapabilities ? cam.track.getCapabilities() : {}; } catch (e) {}
+  $("#cam-flash").hidden = !caps.torch; $("#cam-hueco").hidden = !!caps.torch;
+  cam.linterna = false; $("#cam-flash").classList.remove("encendido");
+  cam.timer = setInterval(guiaEnVivo, 450);
+}
+function cerrarCamara(){
+  clearInterval(cam.timer);
+  if (cam.stream) cam.stream.getTracks().forEach(t => t.stop());
+  cam.stream = cam.track = null; $("#cam-video").srcObject = null;
+  const g = $("#cam-guia"); g.getContext("2d").clearRect(0, 0, g.width, g.height);
+}
+// Dibuja en vivo el contorno de la hoja detectada
+const miniCam = document.createElement("canvas");
+function guiaEnVivo(){
+  const v = $("#cam-video"), g = $("#cam-guia");
+  if (!v.videoWidth) return;
+  const k = 320 / Math.max(v.videoWidth, v.videoHeight);
+  miniCam.width = Math.round(v.videoWidth*k); miniCam.height = Math.round(v.videoHeight*k);
+  miniCam.getContext("2d").drawImage(v, 0, 0, miniCam.width, miniCam.height);
+  const q = detectarBordes(miniCam);
+  const r = g.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  g.width = r.width*dpr; g.height = r.height*dpr;
+  const x = g.getContext("2d"); x.clearRect(0, 0, g.width, g.height);
+  $("#cam-msg").textContent = q ? "Hoja detectada · tocá el botón" : "Apuntá a la hoja";
+  if (!q) return;
+  const e = Math.min(g.width/miniCam.width, g.height/miniCam.height);
+  const ox = (g.width - miniCam.width*e)/2, oy = (g.height - miniCam.height*e)/2;
+  x.beginPath(); q.forEach((p,i) => x[i ? "lineTo" : "moveTo"](ox + p[0]*e, oy + p[1]*e)); x.closePath();
+  x.fillStyle = "rgba(20,184,166,.18)"; x.fill();
+  x.lineWidth = 3*dpr; x.strokeStyle = "#2dd4bf"; x.stroke();
+}
+$("#cam-cerrar").onclick = () => { cerrarCamara(); mostrar("inicio"); };
+$("#cam-flash").onclick = async () => {
+  cam.linterna = !cam.linterna;
+  try { await cam.track.applyConstraints({ advanced: [{ torch: cam.linterna }] }); } catch (e) { cam.linterna = false; }
+  $("#cam-flash").classList.toggle("encendido", cam.linterna);
+};
+$("#cam-disparar").onclick = async () => {
+  const v = $("#cam-video"); if (!v.videoWidth) return;
+  ocupado("Sacando foto…");
+  let foto = null;
+  // 1) foto en máxima resolución, si el navegador lo permite
+  if (window.ImageCapture && cam.track){
+    try {
+      foto = await Promise.race([ new ImageCapture(cam.track).takePhoto(),
+        new Promise((_, mal) => setTimeout(() => mal(new Error("tiempo")), 5000)) ]);
+    } catch (e) { foto = null; }
+  }
+  // 2) si no, se toma el cuadro actual del video
+  if (!foto){
+    const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext("2d").drawImage(v, 0, 0);
+    foto = await new Promise(ok => c.toBlob(ok, "image/jpeg", 0.92));
+  }
+  cerrarCamara(); libre();
+  if (foto) cargarArchivo(foto); else { mostrar("inicio"); aviso("No se pudo sacar la foto"); }
+};
+document.addEventListener("visibilitychange", () => { if (document.hidden && cam.stream){ cerrarCamara(); mostrar("inicio"); } });
 // Si Android cierra la pestaña mientras la cámara está abierta (falta de memoria), al volver
 // la página se recarga vacía. Esta marca permite detectarlo y explicarlo.
 function marcaCamara(on){ try { on ? sessionStorage.setItem("camara", Date.now()) : sessionStorage.removeItem("camara"); } catch (e) {} }
@@ -490,7 +591,9 @@ function candidato(M, w, h){
   const q = cuadMaximo(aCuatroN(hull, 40)), aq = areaPoligono(q), frac = aq/(w*h);
   const relleno = Math.min(tam, aq) / aq;               // qué tan "rectangular" es la mancha
   if (frac < 0.08 || frac > 0.96 || relleno < 0.8) return null;
-  return { q, puntaje: relleno + frac*0.05 };
+  // una "hoja" pegada al marco de la foto suele ser fondo que se coló: se penaliza
+  const toca = q.filter(p => p[0] <= 2 || p[1] <= 2 || p[0] >= w-2 || p[1] >= h-2).length;
+  return { q, puntaje: relleno + frac*0.05 - toca*0.06 };
 }
 function detectarBordes(fuente){
   try {
