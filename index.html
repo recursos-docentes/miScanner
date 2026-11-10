@@ -25,16 +25,16 @@ body{background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-syste
 button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 button:disabled{opacity:.4;cursor:default}
 [hidden]{display:none!important}
-
+ 
 header{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
   background:var(--accent);color:#fff}
 header h1{font-size:1.15rem;margin:0;flex:1;display:flex;align-items:center;gap:8px}
 header .contador{font-size:.85rem;opacity:.85;font-weight:400}
 .btn-head{padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.15);color:#fff;font-size:.85rem}
-
+ 
 main{flex:1;display:flex;flex-direction:column;min-height:0}
 section{flex:1;display:flex;flex-direction:column;min-height:0}
-
+ 
 /* ---------- inicio ---------- */
 #v-inicio{padding:16px 16px 110px}
 .vacio{margin:auto;text-align:center;color:var(--muted);max-width:320px;padding:40px 0}
@@ -48,14 +48,14 @@ section{flex:1;display:flex;flex-direction:column;min-height:0}
 .tarjeta .acc button{flex:1;padding:8px 0;border-radius:8px;font-size:1rem}
 .tarjeta .acc button:hover{background:var(--line)}
 .tarjeta .acc .borrar{color:var(--danger)}
-
+ 
 .barra{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;justify-content:center;
   padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line);z-index:5}
 .barra button{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:12px;font-size:.78rem;color:var(--muted)}
 .barra button svg{width:26px;height:26px}
 .barra button.principal{background:var(--accent);color:#fff}
 .barra button:not(.principal):not(:disabled):hover{background:var(--line);color:var(--text)}
-
+ 
 /* ---------- edición ---------- */
 .herr{display:flex;gap:6px;align-items:center;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
 .herr .titulo{flex:1;font-weight:600;font-size:.95rem;min-width:120px}
@@ -74,11 +74,11 @@ section{flex:1;display:flex;flex-direction:column;min-height:0}
 .filtros{display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:var(--panel);border-top:1px solid var(--line)}
 .filtros .chip{flex:none}
 .ayuda{font-size:.8rem;color:var(--muted);padding:6px 12px;background:var(--panel);text-align:center}
-
+ 
 /* ---------- texto ---------- */
 #v-texto{padding:16px;gap:10px}
 #v-texto textarea{flex:1;min-height:300px;width:100%;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:12px;font:15px/1.5 ui-monospace,Consolas,monospace;resize:none}
-
+ 
 /* ---------- diálogo / overlay / aviso ---------- */
 dialog{border:0;border-radius:16px;padding:20px;background:var(--panel);color:var(--text);width:min(92vw,380px);box-shadow:0 20px 50px rgba(0,0,0,.35)}
 dialog::backdrop{background:rgba(15,23,42,.55)}
@@ -95,19 +95,23 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
 .progreso div{height:100%;width:0;background:var(--accent-2);transition:width .2s}
 #aviso{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
 #aviso.ver{opacity:1}
+.error{background:#fee2e2;color:#7f1d1d;border:1px solid #fca5a5;border-radius:12px;padding:12px 40px 12px 14px;margin-bottom:14px;position:relative;font-size:.92rem}
+.error p{margin:0 0 4px;font-weight:600}.error small{opacity:.8;word-break:break-word}
+.error button{position:absolute;top:6px;right:6px;padding:6px 10px;color:inherit}
 .banner{background:#fef3c7;color:#78350f;padding:10px 16px;font-size:.88rem;border-bottom:1px solid #fcd34d}
 </style>
 </head>
 <body>
-
+ 
 <header>
   <h1>MiEscáner <span class="contador" id="contador"></span></h1>
   <button class="btn-head" id="btn-vaciar" hidden>Vaciar</button>
 </header>
-
+ 
 <main>
   <!-- INICIO -->
   <section id="v-inicio">
+    <div class="error" id="error" hidden><button title="Cerrar" onclick="this.parentNode.hidden=true">✕</button><p></p><small></small></div>
     <div class="vacio" id="vacio">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8 7h6l2 2v8H8z"/><path d="M3 12h18" stroke-dasharray="2 2"/></svg>
       <strong>No hay páginas todavía</strong>
@@ -116,7 +120,7 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
     </div>
     <div class="grilla" id="grilla"></div>
   </section>
-
+ 
   <!-- RECORTE -->
   <section id="v-recorte" hidden>
     <div class="herr">
@@ -139,7 +143,7 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
       <button class="ok" id="recorte-ok">Siguiente</button>
     </div>
   </section>
-
+ 
   <!-- FILTRO -->
   <section id="v-filtro" hidden>
     <div class="herr"><span class="titulo">Elegir filtro</span></div>
@@ -155,7 +159,7 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
       <button class="ok" id="filtro-ok">Guardar página</button>
     </div>
   </section>
-
+ 
   <!-- TEXTO OCR -->
   <section id="v-texto" hidden>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -170,7 +174,7 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
     </div>
   </section>
 </main>
-
+ 
 <nav class="barra" id="barra">
   <button class="principal" id="btn-camara">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Cámara</button>
@@ -181,10 +185,10 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
   <button id="btn-ocr" disabled>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><path d="M8 9h8M12 9v7"/></svg>Texto</button>
 </nav>
-
+ 
 <input type="file" id="in-camara" accept="image/*" capture="environment" hidden>
 <input type="file" id="in-galeria" accept="image/*" multiple hidden>
-
+ 
 <dialog id="dlg-pdf">
   <h2>Exportar PDF</h2>
   <label for="pdf-nombre">Nombre del archivo</label>
@@ -200,17 +204,17 @@ dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accen
     <button class="ok" id="pdf-bajar">Descargar</button>
   </div>
 </dialog>
-
+ 
 <div id="ocupado" hidden><div class="spin"></div><div id="ocupado-msg">Procesando…</div><div class="progreso" id="ocupado-barra" hidden><div></div></div></div>
 <div id="aviso"></div>
-
+ 
 <script>
 "use strict";
 const $ = s => document.querySelector(s);
 const MAX_LADO = 2400;            // lado máximo de trabajo (px)
 const URL_JSPDF = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
 const URL_TESS  = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
-
+ 
 const est = {
   paginas: [],      // {url, w, h}
   fuente: null,     // canvas con la foto original (reducida)
@@ -221,7 +225,7 @@ const est = {
   cola: [],         // fotos pendientes (galería múltiple)
   escala: 1, arrastre: -1, offset: [0,0]
 };
-
+ 
 /* ================= utilidades UI ================= */
 function mostrar(v){
   for (const n of ["inicio","recorte","filtro","texto"]) $("#v-"+n).hidden = n !== v;
@@ -242,9 +246,27 @@ function cargarScript(url){
   });
 }
 function hoy(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); return `Escaneo_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
-
+ 
 /* ================= lista de páginas ================= */
+/* ===== guardado de páginas en el celular (IndexedDB) para no perderlas si la página se recarga ===== */
+function abrirDB(){
+  return new Promise((ok, mal) => {
+    const r = indexedDB.open("miescaner", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("datos");
+    r.onsuccess = () => ok(r.result); r.onerror = () => mal(r.error);
+  });
+}
+async function guardarPaginas(){
+  try { const db = await abrirDB(); db.transaction("datos","readwrite").objectStore("datos").put(est.paginas, "paginas"); } catch (e) {}
+}
+async function cargarPaginas(){
+  try {
+    const db = await abrirDB();
+    return await new Promise(ok => { const r = db.transaction("datos").objectStore("datos").get("paginas"); r.onsuccess = () => ok(r.result || []); r.onerror = () => ok([]); });
+  } catch (e) { return []; }
+}
 function renderPaginas(){
+  guardarPaginas();
   const g = $("#grilla"); g.innerHTML = "";
   const n = est.paginas.length;
   $("#vacio").hidden = n > 0;
@@ -283,11 +305,15 @@ async function rotarPagina(i){
 function cargarImagen(src){
   return new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = src; });
 }
-
+ 
 /* ================= entrada de fotos ================= */
-$("#btn-camara").onclick = () => $("#in-camara").click();
+$("#btn-camara").onclick = () => { marcaCamara(true); $("#in-camara").click(); };
+// Si Android cierra la pestaña mientras la cámara está abierta (falta de memoria), al volver
+// la página se recarga vacía. Esta marca permite detectarlo y explicarlo.
+function marcaCamara(on){ try { on ? sessionStorage.setItem("camara", Date.now()) : sessionStorage.removeItem("camara"); } catch (e) {} }
+document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(() => marcaCamara(false), 4000); });
 $("#btn-galeria").onclick = () => $("#in-galeria").click();
-$("#in-camara").onchange = e => { const f=[...e.target.files]; e.target.value=""; encolar(f); };
+$("#in-camara").onchange = e => { marcaCamara(false); const f=[...e.target.files]; e.target.value=""; encolar(f); };
 $("#in-galeria").onchange = e => { const f=[...e.target.files]; e.target.value=""; encolar(f); };
 function encolar(files){ if (!files.length) return; est.cola.push(...files); if ($("#v-inicio").hidden === false) siguienteEnCola(); }
 function siguienteEnCola(){
@@ -343,15 +369,16 @@ async function cargarArchivo(file){
     const motivo = e.message === "memoria" ? "el celular se quedó sin memoria"
       : esHeic(file) ? "no se pudo convertir la foto HEIC (¿hay conexión?)"
       : "el navegador no reconoce el formato";
-    alertaError(`No se pudo abrir la foto: ${motivo}.\nArchivo: ${tipo}, ${mb} MB.`);
+    mostrarError(`No se pudo abrir la foto: ${motivo}.`, `Archivo: ${tipo}, ${mb} MB · ${e.name || "Error"}: ${e.message || e}`);
     siguienteEnCola();
   }
 }
-function alertaError(msg){
-  const a = $("#aviso"); a.style.whiteSpace = "pre-line"; aviso(msg);
-  clearTimeout(tAviso); tAviso = setTimeout(() => { a.classList.remove("ver"); a.style.whiteSpace = ""; }, 7000);
+function mostrarError(msg, detalle){
+  const d = $("#error"); d.hidden = false;
+  d.querySelector("p").textContent = msg;
+  d.querySelector("small").textContent = detalle || "";
 }
-
+ 
 /* ================= recorte con 4 esquinas ================= */
 function esquinasDefecto(m){
   const w = est.fuente.width, h = est.fuente.height;
@@ -515,7 +542,7 @@ function detectarBordes(fuente){
       Math.min(fuente.height, Math.max(0, (cy + (p[1]-cy)*f) * s))]));
   } catch (e) { return null; }
 }
-
+ 
 function dibujarRecorte(){
   const area = $("#area-recorte"), f = est.fuente;
   const aw = area.clientWidth - 32, ah = area.clientHeight - 32;
@@ -560,7 +587,7 @@ svgR.addEventListener("pointermove", e => {
 const soltar = () => { est.arrastre = -1; $("#lupa").hidden = true; if (est.esq) actualizarSvg(); };
 svgR.addEventListener("pointerup", soltar);
 svgR.addEventListener("pointercancel", soltar);
-
+ 
 function dibujarLupa(e){
   const L = $("#lupa"), area = $("#area-recorte"), ar = area.getBoundingClientRect();
   L.hidden = false;
@@ -580,7 +607,7 @@ function dibujarLupa(e){
   x.strokeStyle = "#fbbf24"; x.lineWidth = 1.5;
   x.beginPath(); x.moveTo(T/2-12,T/2); x.lineTo(T/2+12,T/2); x.moveTo(T/2,T/2-12); x.lineTo(T/2,T/2+12); x.stroke();
 }
-
+ 
 function rotarFuente(sentido){ // 1 = horario, -1 = antihorario
   const f = est.fuente, w = f.width, h = f.height;
   const c = document.createElement("canvas"); c.width = h; c.height = w;
@@ -601,14 +628,14 @@ $("#auto-bordes").onclick = () => {
 };
 $("#recorte-cancelar").onclick = () => { est.fuente = null; siguienteEnCola(); };
 window.addEventListener("resize", () => { if (!$("#v-recorte").hidden && est.fuente) dibujarRecorte(); });
-
+ 
 function ordenarEsquinas(q){
   const cx = q.reduce((s,p)=>s+p[0],0)/4, cy = q.reduce((s,p)=>s+p[1],0)/4;
   const o = [...q].sort((a,b) => Math.atan2(a[1]-cy,a[0]-cx) - Math.atan2(b[1]-cy,b[0]-cx));
   let k = 0; o.forEach((p,i) => { if (p[0]+p[1] < o[k][0]+o[k][1]) k = i; });
   return [...o.slice(k), ...o.slice(0,k)];
 }
-
+ 
 $("#recorte-ok").onclick = async () => {
   ocupado("Enderezando la hoja…"); await respiro();
   try {
@@ -618,7 +645,7 @@ $("#recorte-ok").onclick = async () => {
     libre(); mostrar("filtro"); await verFiltro(est.filtro);
   } catch (e) { libre(); aviso("Error al procesar: " + e.message); }
 };
-
+ 
 /* ================= perspectiva (homografía) ================= */
 function resolver(A, B){
   const n = B.length;
@@ -676,7 +703,7 @@ function enderezar(src, q){
   ox.putImageData(od,0,0);
   return out;
 }
-
+ 
 /* ================= filtros ================= */
 function integral(L, w, h){
   const W1 = w+1, I = new Uint32Array(W1*(h+1));
@@ -735,7 +762,7 @@ $("#filtro-ok").onclick = () => {
   aviso(`Página ${est.paginas.length} guardada`);
   siguienteEnCola();
 };
-
+ 
 /* ================= PDF ================= */
 async function generarPDF(){
   await cargarScript(URL_JSPDF);
@@ -784,7 +811,7 @@ $("#pdf-compartir").onclick = async () => {
     await navigator.share({ files: [new File([blob], nombre + ".pdf", { type:"application/pdf" })], title: nombre });
   } catch (e) { libre(); if (e.name !== "AbortError") aviso("No se pudo compartir"); }
 };
-
+ 
 /* ================= OCR ================= */
 $("#btn-ocr").onclick = async () => {
   ocupado("Cargando el reconocedor de texto…", true);
@@ -823,11 +850,19 @@ $("#txt-bajar").onclick = () => {
   setTimeout(() => URL.revokeObjectURL(u), 60000);
 };
 $("#txt-volver").onclick = () => mostrar("inicio");
-
+ 
 /* ================= varios ================= */
 $("#btn-vaciar").onclick = () => { if (confirm("¿Borrar todas las páginas?")) { est.paginas = []; renderPaginas(); } };
-window.addEventListener("beforeunload", e => { if (est.paginas.length) { e.preventDefault(); e.returnValue = ""; } });
-renderPaginas();
+(async function iniciar(){
+  est.paginas = await cargarPaginas();
+  renderPaginas();
+  let marca = null; try { marca = sessionStorage.getItem("camara"); } catch (e) {}
+  if (marca && Date.now() - marca < 10*60*1000){
+    marcaCamara(false);
+    mostrarError("Android cerró la página mientras estaba abierta la cámara, por eso la foto no llegó.",
+      "Suele pasar por falta de memoria. Probá cerrar otras apps, o sacá la foto con la cámara del celular y después elegila con «Galería».");
+  }
+})();
 // Navegadores internos de WhatsApp, Instagram, Facebook, etc. suelen bloquear cámara y archivos
 (function(){
   const ua = navigator.userAgent || "";
@@ -840,3 +875,4 @@ renderPaginas();
 </script>
 </body>
 </html>
+ 
