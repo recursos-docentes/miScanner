@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MiEscáner">
+<title>MiEscáner</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230f766e'/%3E%3Cpath d='M18 14h20l10 10v26H18z' fill='white'/%3E%3Cpath d='M12 32h40' stroke='%23fbbf24' stroke-width='4'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f4f6f8; --panel:#ffffff; --text:#0f172a; --muted:#64748b; --line:#e2e8f0;
+  --accent:#0f766e; --accent-2:#14b8a6; --danger:#dc2626; --warn:#fbbf24;
+  --shadow:0 1px 3px rgba(15,23,42,.08),0 6px 18px rgba(15,23,42,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0b1220; --panel:#131c2e; --text:#e5e7eb; --muted:#94a3b8; --line:#243047; --accent:#14b8a6; --accent-2:#2dd4bf; --shadow:none}
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  display:flex;flex-direction:column;min-height:100dvh;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:disabled{opacity:.4;cursor:default}
+[hidden]{display:none!important}
+
+header{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background:var(--accent);color:#fff}
+header h1{font-size:1.15rem;margin:0;flex:1;display:flex;align-items:center;gap:8px}
+header .contador{font-size:.85rem;opacity:.85;font-weight:400}
+.btn-head{padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.15);color:#fff;font-size:.85rem}
+
+main{flex:1;display:flex;flex-direction:column;min-height:0}
+section{flex:1;display:flex;flex-direction:column;min-height:0}
+
+/* ---------- inicio ---------- */
+#v-inicio{padding:16px 16px 110px}
+.vacio{margin:auto;text-align:center;color:var(--muted);max-width:320px;padding:40px 0}
+.vacio svg{width:90px;height:90px;opacity:.6;margin-bottom:12px}
+.vacio strong{display:block;color:var(--text);font-size:1.1rem;margin-bottom:6px}
+.grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+.tarjeta{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;border:1px solid var(--line);display:flex;flex-direction:column}
+.tarjeta .mini{aspect-ratio:3/4;background:#e5e7eb center/contain no-repeat;position:relative}
+.tarjeta .num{position:absolute;top:6px;left:6px;background:var(--accent);color:#fff;border-radius:999px;font-size:.75rem;padding:2px 8px;font-weight:600}
+.tarjeta .acc{display:flex;justify-content:space-between;padding:4px}
+.tarjeta .acc button{flex:1;padding:8px 0;border-radius:8px;font-size:1rem}
+.tarjeta .acc button:hover{background:var(--line)}
+.tarjeta .acc .borrar{color:var(--danger)}
+
+.barra{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;justify-content:center;
+  padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line);z-index:5}
+.barra button{flex:1;max-width:120px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border-radius:12px;font-size:.78rem;color:var(--muted)}
+.barra button svg{width:26px;height:26px}
+.barra button.principal{background:var(--accent);color:#fff}
+.barra button:not(.principal):not(:disabled):hover{background:var(--line);color:var(--text)}
+
+/* ---------- edición ---------- */
+.herr{display:flex;gap:6px;align-items:center;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.herr .titulo{flex:1;font-weight:600;font-size:.95rem;min-width:120px}
+.chip{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:.85rem;display:inline-flex;align-items:center;gap:6px}
+.chip svg{width:18px;height:18px}
+.chip.activo{background:var(--accent);border-color:var(--accent);color:#fff}
+.area{flex:1;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#111827;min-height:0;padding:16px}
+.marco{position:relative;touch-action:none}
+.marco canvas,.marco svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+#svg-recorte{touch-action:none;cursor:crosshair}
+#lupa{position:absolute;top:12px;width:130px;height:130px;border-radius:50%;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.5);pointer-events:none;background:#000}
+#prev-filtro{max-width:100%;max-height:100%;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.pie{display:flex;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--panel);border-top:1px solid var(--line)}
+.pie button{flex:1;padding:13px;border-radius:12px;font-weight:600;border:1px solid var(--line)}
+.pie button.ok{background:var(--accent);color:#fff;border-color:var(--accent)}
+.filtros{display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:var(--panel);border-top:1px solid var(--line)}
+.filtros .chip{flex:none}
+.ayuda{font-size:.8rem;color:var(--muted);padding:6px 12px;background:var(--panel);text-align:center}
+
+/* ---------- texto ---------- */
+#v-texto{padding:16px;gap:10px}
+#v-texto textarea{flex:1;min-height:300px;width:100%;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:12px;font:15px/1.5 ui-monospace,Consolas,monospace;resize:none}
+
+/* ---------- diálogo / overlay / aviso ---------- */
+dialog{border:0;border-radius:16px;padding:20px;background:var(--panel);color:var(--text);width:min(92vw,380px);box-shadow:0 20px 50px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(15,23,42,.55)}
+dialog h2{margin:0 0 12px;font-size:1.1rem}
+dialog label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 4px}
+dialog input,dialog select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text);font:inherit}
+dialog .botones{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+dialog .botones button{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);font-weight:600;min-width:100px}
+dialog .botones .ok{background:var(--accent);color:#fff;border-color:var(--accent)}
+#ocupado{position:fixed;inset:0;background:rgba(15,23,42,.7);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff;z-index:50;text-align:center;padding:20px}
+.spin{width:44px;height:44px;border:4px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:g 1s linear infinite}
+@keyframes g{to{transform:rotate(360deg)}}
+.progreso{width:220px;height:6px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden}
+.progreso div{height:100%;width:0;background:var(--accent-2);transition:width .2s}
+#aviso{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 16px;border-radius:10px;font-size:.9rem;z-index:60;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90vw;text-align:center}
+#aviso.ver{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>MiEscáner <span class="contador" id="contador"></span></h1>
+  <button class="btn-head" id="btn-vaciar" hidden>Vaciar</button>
+</header>
+
+<main>
+  <!-- INICIO -->
+  <section id="v-inicio">
+    <div class="vacio" id="vacio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8 7h6l2 2v8H8z"/><path d="M3 12h18" stroke-dasharray="2 2"/></svg>
+      <strong>No hay páginas todavía</strong>
+      Tocá <b>Cámara</b> para fotografiar un documento o <b>Galería</b> para elegir fotos que ya tengas.
+      Todo se procesa en tu dispositivo: nada se sube a internet.
+    </div>
+    <div class="grilla" id="grilla"></div>
+  </section>
+
+  <!-- RECORTE -->
+  <section id="v-recorte" hidden>
+    <div class="herr">
+      <span class="titulo">Bordes</span>
+      <button class="chip" id="rot-izq" title="Rotar a la izquierda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4v6h6"/><path d="M3.5 15a9 9 0 1 0 2.1-9.4L3 10"/></svg></button>
+      <button class="chip" id="rot-der" title="Rotar a la derecha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 4v6h-6"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L21 10"/></svg></button>
+      <button class="chip" id="auto-bordes" title="Detectar la hoja automáticamente">Auto</button>
+      <button class="chip" id="hoja-completa">Completa</button>
+    </div>
+    <div class="area" id="area-recorte">
+      <div class="marco" id="marco-recorte">
+        <canvas id="cv-recorte"></canvas>
+        <svg id="svg-recorte"></svg>
+      </div>
+      <canvas id="lupa" hidden></canvas>
+    </div>
+    <div class="ayuda">Arrastrá las 4 esquinas hasta los bordes de la hoja.</div>
+    <div class="pie">
+      <button id="recorte-cancelar">Descartar</button>
+      <button class="ok" id="recorte-ok">Siguiente</button>
+    </div>
+  </section>
+
+  <!-- FILTRO -->
+  <section id="v-filtro" hidden>
+    <div class="herr"><span class="titulo">Elegir filtro</span></div>
+    <div class="area"><canvas id="prev-filtro"></canvas></div>
+    <div class="filtros" id="filtros">
+      <button class="chip activo" data-f="mejorada">Mejorada</button>
+      <button class="chip" data-f="grises">Grises</button>
+      <button class="chip" data-f="bn">Blanco y negro</button>
+      <button class="chip" data-f="original">Original</button>
+    </div>
+    <div class="pie">
+      <button id="filtro-volver">Volver</button>
+      <button class="ok" id="filtro-ok">Guardar página</button>
+    </div>
+  </section>
+
+  <!-- TEXTO OCR -->
+  <section id="v-texto" hidden>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <strong style="flex:1">Texto reconocido</strong>
+      <button class="chip" id="txt-copiar">Copiar</button>
+      <button class="chip" id="txt-bajar">Descargar .txt</button>
+    </div>
+    <textarea id="txt-salida" spellcheck="false"></textarea>
+    <div class="ayuda" style="background:none">El reconocimiento puede tener errores: revisalo antes de usarlo.</div>
+    <div class="pie" style="margin:0 -16px -16px">
+      <button class="ok" id="txt-volver">Volver a las páginas</button>
+    </div>
+  </section>
+</main>
+
+<nav class="barra" id="barra">
+  <button class="principal" id="btn-camara">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Cámara</button>
+  <button id="btn-galeria">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>Galería</button>
+  <button id="btn-pdf" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4"/><path d="M9 13h6M9 17h4"/></svg>PDF</button>
+  <button id="btn-ocr" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3"/><path d="M8 9h8M12 9v7"/></svg>Texto</button>
+</nav>
+
+<input type="file" id="in-camara" accept="image/*" capture="environment" hidden>
+<input type="file" id="in-galeria" accept="image/*" multiple hidden>
+
+<dialog id="dlg-pdf">
+  <h2>Exportar PDF</h2>
+  <label for="pdf-nombre">Nombre del archivo</label>
+  <input id="pdf-nombre" autocomplete="off">
+  <label for="pdf-tam">Tamaño de página</label>
+  <select id="pdf-tam">
+    <option value="a4">A4 (la imagen se ajusta a la hoja)</option>
+    <option value="imagen">Igual a la imagen</option>
+  </select>
+  <div class="botones">
+    <button id="pdf-cerrar">Cancelar</button>
+    <button id="pdf-compartir" hidden>Compartir</button>
+    <button class="ok" id="pdf-bajar">Descargar</button>
+  </div>
+</dialog>
+
+<div id="ocupado" hidden><div class="spin"></div><div id="ocupado-msg">Procesando…</div><div class="progreso" id="ocupado-barra" hidden><div></div></div></div>
+<div id="aviso"></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const MAX_LADO = 2400;            // lado máximo de trabajo (px)
+const URL_JSPDF = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+const URL_TESS  = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js";
+
+const est = {
+  paginas: [],      // {url, w, h}
+  fuente: null,     // canvas con la foto original (reducida)
+  esq: null,        // [[x,y]x4] en coords de la fuente: sup-izq, sup-der, inf-der, inf-izq
+  recorte: null,    // canvas enderezado
+  cache: {},        // filtros ya calculados
+  filtro: "mejorada",
+  cola: [],         // fotos pendientes (galería múltiple)
+  escala: 1, arrastre: -1, offset: [0,0]
+};
+
+/* ================= utilidades UI ================= */
+function mostrar(v){
+  for (const n of ["inicio","recorte","filtro","texto"]) $("#v-"+n).hidden = n !== v;
+  $("#barra").hidden = v !== "inicio";
+  window.scrollTo(0,0);
+}
+function ocupado(msg, conBarra=false){ $("#ocupado-msg").textContent = msg; $("#ocupado-barra").hidden = !conBarra; progreso(0); $("#ocupado").hidden = false; }
+function progreso(p){ $("#ocupado-barra div").style.width = Math.round(p*100)+"%"; }
+function libre(){ $("#ocupado").hidden = true; }
+let tAviso;
+function aviso(msg){ const a=$("#aviso"); a.textContent=msg; a.classList.add("ver"); clearTimeout(tAviso); tAviso=setTimeout(()=>a.classList.remove("ver"),2600); }
+const respiro = () => new Promise(r => setTimeout(r, 30));
+function cargarScript(url){
+  return new Promise((ok, mal) => {
+    if (document.querySelector(`script[src="${url}"]`)) return ok();
+    const s = document.createElement("script"); s.src = url; s.onload = ok;
+    s.onerror = () => mal(new Error("No se pudo cargar " + url)); document.head.appendChild(s);
+  });
+}
+function hoy(){ const d=new Date(); const p=n=>String(n).padStart(2,"0"); return `Escaneo_${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`; }
+
+/* ================= lista de páginas ================= */
+function renderPaginas(){
+  const g = $("#grilla"); g.innerHTML = "";
+  const n = est.paginas.length;
+  $("#vacio").hidden = n > 0;
+  $("#btn-pdf").disabled = $("#btn-ocr").disabled = n === 0;
+  $("#btn-vaciar").hidden = n === 0;
+  $("#contador").textContent = n ? `· ${n} pág.` : "";
+  est.paginas.forEach((p, i) => {
+    const t = document.createElement("div"); t.className = "tarjeta";
+    t.innerHTML = `<div class="mini" style="background-image:url(${p.url})"><span class="num">${i+1}</span></div>
+      <div class="acc">
+        <button title="Mover antes" ${i===0?"disabled":""} data-a="izq">←</button>
+        <button title="Rotar" data-a="rot">⟳</button>
+        <button title="Mover después" ${i===n-1?"disabled":""} data-a="der">→</button>
+        <button title="Eliminar" class="borrar" data-a="del">✕</button>
+      </div>`;
+    t.querySelector(".acc").addEventListener("click", e => {
+      const a = e.target.closest("button")?.dataset.a; if (!a) return;
+      const P = est.paginas;
+      if (a==="izq") [P[i-1],P[i]] = [P[i],P[i-1]];
+      if (a==="der") [P[i+1],P[i]] = [P[i],P[i+1]];
+      if (a==="del") { if (!confirm(`¿Eliminar la página ${i+1}?`)) return; P.splice(i,1); }
+      if (a==="rot") { rotarPagina(i); return; }
+      renderPaginas();
+    });
+    g.appendChild(t);
+  });
+}
+async function rotarPagina(i){
+  const p = est.paginas[i];
+  const img = await cargarImagen(p.url);
+  const c = document.createElement("canvas"); c.width = img.height; c.height = img.width;
+  const x = c.getContext("2d"); x.translate(c.width,0); x.rotate(Math.PI/2); x.drawImage(img,0,0);
+  est.paginas[i] = { url: c.toDataURL("image/jpeg",0.9), w: c.width, h: c.height };
+  renderPaginas();
+}
+function cargarImagen(src){
+  return new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = src; });
+}
+
+/* ================= entrada de fotos ================= */
+$("#btn-camara").onclick = () => $("#in-camara").click();
+$("#btn-galeria").onclick = () => $("#in-galeria").click();
+$("#in-camara").onchange = e => { const f=[...e.target.files]; e.target.value=""; encolar(f); };
+$("#in-galeria").onchange = e => { const f=[...e.target.files]; e.target.value=""; encolar(f); };
+function encolar(files){ if (!files.length) return; est.cola.push(...files); if ($("#v-inicio").hidden === false) siguienteEnCola(); }
+function siguienteEnCola(){
+  const f = est.cola.shift();
+  if (f) cargarArchivo(f); else { mostrar("inicio"); renderPaginas(); }
+}
+async function cargarArchivo(file){
+  ocupado("Abriendo imagen…");
+  try {
+    const url = URL.createObjectURL(file);
+    const img = await cargarImagen(url);
+    let w = img.naturalWidth, h = img.naturalHeight;
+    const k = Math.min(1, MAX_LADO / Math.max(w,h));
+    w = Math.round(w*k); h = Math.round(h*k);
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    c.getContext("2d").drawImage(img, 0, 0, w, h);
+    URL.revokeObjectURL(url);
+    est.fuente = c;
+    const auto = detectarBordes(c);
+    if (auto) est.esq = auto; else esquinasDefecto(0.06);
+    libre(); mostrar("recorte"); dibujarRecorte();
+    if (!auto) aviso("No se detectó la hoja: ajustá las esquinas a mano");
+    if (est.cola.length) aviso(`Quedan ${est.cola.length} foto(s) más`);
+  } catch (e) {
+    libre(); aviso("No se pudo abrir esa imagen."); siguienteEnCola();
+  }
+}
+
+/* ================= recorte con 4 esquinas ================= */
+function esquinasDefecto(m){
+  const w = est.fuente.width, h = est.fuente.height;
+  est.esq = [[m*w,m*h],[w-m*w,m*h],[w-m*w,h-m*h],[m*w,h-m*h]];
+}
+/* ================= detección automática de bordes ================= */
+// Reduce la foto, separa la hoja del fondo (por brillo y por diferencia con el color del borde),
+// toma la mancha más grande, calcula su envolvente convexa y la simplifica a 4 vértices.
+function otsu(vals){
+  const hist = new Float64Array(256); for (const v of vals) hist[v]++;
+  const n = vals.length; let suma = 0; for (let i = 0; i < 256; i++) suma += i*hist[i];
+  let sB = 0, wB = 0, mejor = 0, t = 128;
+  for (let i = 0; i < 256; i++){
+    wB += hist[i]; if (!wB) continue; const wF = n - wB; if (!wF) break;
+    sB += i*hist[i]; const mB = sB/wB, mF = (suma - sB)/wF, v = wB*wF*(mB-mF)*(mB-mF);
+    if (v > mejor){ mejor = v; t = i; }
+  }
+  return t;
+}
+function desenfocar(A, w, h, r){
+  const T = new Float32Array(w*h), O = new Uint8Array(w*h);
+  for (let y = 0; y < h; y++){ let s = 0, c = 0;
+    for (let x = -r; x < w + r; x++){
+      if (x + r < w){ s += A[y*w + x + r]; c++; }
+      if (x - r - 1 >= 0){ s -= A[y*w + x - r - 1]; c--; }
+      if (x >= 0 && x < w) T[y*w+x] = s/c;
+    } }
+  for (let x = 0; x < w; x++){ let s = 0, c = 0;
+    for (let y = -r; y < h + r; y++){
+      if (y + r < h){ s += T[(y+r)*w + x]; c++; }
+      if (y - r - 1 >= 0){ s -= T[(y-r-1)*w + x]; c--; }
+      if (y >= 0 && y < h) O[y*w+x] = s/c;
+    } }
+  return O;
+}
+function morfo(M, w, h, erosion){ // 3x3
+  const O = new Uint8Array(w*h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++){
+    let r = erosion ? 1 : 0;
+    for (let dy = -1; dy <= 1 && r === (erosion?1:0); dy++) for (let dx = -1; dx <= 1; dx++){
+      const yy = y+dy, xx = x+dx;
+      const v = (yy < 0 || yy >= h || xx < 0 || xx >= w) ? 0 : M[yy*w+xx];
+      if (erosion && !v){ r = 0; break; } if (!erosion && v){ r = 1; break; }
+    }
+    O[y*w+x] = r;
+  }
+  return O;
+}
+function mayorComponente(M, w, h){
+  const etiqueta = new Int32Array(w*h), pila = new Int32Array(w*h);
+  let mejor = 0, mejorTam = 0, id = 0;
+  for (let i = 0; i < w*h; i++){
+    if (!M[i] || etiqueta[i]) continue;
+    id++; let tam = 0, sp = 0; pila[sp++] = i; etiqueta[i] = id;
+    while (sp){
+      const p = pila[--sp]; tam++; const x = p % w, y = (p / w) | 0;
+      if (x > 0 && M[p-1] && !etiqueta[p-1]){ etiqueta[p-1] = id; pila[sp++] = p-1; }
+      if (x < w-1 && M[p+1] && !etiqueta[p+1]){ etiqueta[p+1] = id; pila[sp++] = p+1; }
+      if (y > 0 && M[p-w] && !etiqueta[p-w]){ etiqueta[p-w] = id; pila[sp++] = p-w; }
+      if (y < h-1 && M[p+w] && !etiqueta[p+w]){ etiqueta[p+w] = id; pila[sp++] = p+w; }
+    }
+    if (tam > mejorTam){ mejorTam = tam; mejor = id; }
+  }
+  return { etiqueta, id: mejor, tam: mejorTam };
+}
+function envolvente(pts){
+  pts.sort((a,b) => a[0]-b[0] || a[1]-b[1]);
+  const cruz = (o,a,b) => (a[0]-o[0])*(b[1]-o[1]) - (a[1]-o[1])*(b[0]-o[0]);
+  const inf = [], sup = [];
+  for (const p of pts){ while (inf.length >= 2 && cruz(inf[inf.length-2], inf[inf.length-1], p) <= 0) inf.pop(); inf.push(p); }
+  for (let i = pts.length-1; i >= 0; i--){ const p = pts[i]; while (sup.length >= 2 && cruz(sup[sup.length-2], sup[sup.length-1], p) <= 0) sup.pop(); sup.push(p); }
+  sup.pop(); inf.pop(); return inf.concat(sup);
+}
+function areaPoligono(P){ let s = 0; for (let i = 0; i < P.length; i++){ const a = P[i], b = P[(i+1)%P.length]; s += a[0]*b[1] - b[0]*a[1]; } return Math.abs(s)/2; }
+function aCuatroN(P, N){ // quita el vértice que menos área aporta hasta quedar con N
+  P = P.slice();
+  while (P.length > N){
+    let k = 0, menor = Infinity;
+    for (let i = 0; i < P.length; i++){
+      const a = P[(i-1+P.length)%P.length], b = P[i], c = P[(i+1)%P.length];
+      const ar = Math.abs((b[0]-a[0])*(c[1]-a[1]) - (b[1]-a[1])*(c[0]-a[0]));
+      if (ar < menor){ menor = ar; k = i; }
+    }
+    P.splice(k,1);
+  }
+  return P;
+}
+function cuadMaximo(P){ // los 4 vértices de la envolvente que encierran el área máxima
+  const n = P.length; if (n <= 4) return P;
+  const tri = (a,b,c) => Math.abs((b[0]-a[0])*(c[1]-a[1]) - (b[1]-a[1])*(c[0]-a[0]));
+  let mejor = -1, res = null;
+  for (let i = 0; i < n; i++) for (let k = i+2; k < n; k++){
+    let bj = -1, aj = -1; for (let j = i+1; j < k; j++){ const a = tri(P[i],P[j],P[k]); if (a > aj){ aj = a; bj = j; } }
+    let bl = -1, al = -1; for (let l = k+1; l < n + i; l++){ const a = tri(P[k],P[l%n],P[i]); if (a > al){ al = a; bl = l%n; } }
+    if (bj < 0 || bl < 0) continue;
+    if (aj + al > mejor){ mejor = aj + al; res = [P[i],P[bj],P[k],P[bl]]; }
+  }
+  return res || P.slice(0,4);
+}
+function candidato(M, w, h){
+  M = morfo(morfo(M,w,h,true),w,h,false);               // apertura: quita ruido y puentes finos
+  const { etiqueta, id, tam } = mayorComponente(M, w, h);
+  if (!id || tam < w*h*0.05) return null;
+  const pts = [];
+  for (let y = 0; y < h; y++){ let a = -1, b = -1;
+    for (let x = 0; x < w; x++) if (etiqueta[y*w+x] === id){ if (a < 0) a = x; b = x; }
+    if (a >= 0){ pts.push([a,y]); pts.push([b+1,y]); pts.push([a,y+1]); pts.push([b+1,y+1]); } }
+  const hull = envolvente(pts); if (hull.length < 4) return null;
+  const q = cuadMaximo(aCuatroN(hull, 40)), aq = areaPoligono(q), frac = aq/(w*h);
+  const relleno = Math.min(tam, aq) / aq;               // qué tan "rectangular" es la mancha
+  if (frac < 0.08 || frac > 0.96 || relleno < 0.8) return null;
+  return { q, puntaje: relleno + frac*0.05 };
+}
+function detectarBordes(fuente){
+  try {
+    const k = 320 / Math.max(fuente.width, fuente.height);
+    const w = Math.max(16, Math.round(fuente.width*k)), h = Math.max(16, Math.round(fuente.height*k));
+    const c = document.createElement("canvas"); c.width = w; c.height = h;
+    const x = c.getContext("2d"); x.drawImage(fuente, 0, 0, w, h);
+    const D = x.getImageData(0,0,w,h).data, N = w*h;
+    const R = new Uint8Array(N), G = new Uint8Array(N), B = new Uint8Array(N), L = new Uint8Array(N);
+    for (let i = 0; i < N; i++){ R[i] = D[i*4]; G[i] = D[i*4+1]; B[i] = D[i*4+2]; L[i] = (R[i]*77 + G[i]*150 + B[i]*29) >> 8; }
+    const Lb = desenfocar(L, w, h, 2), Rb = desenfocar(R,w,h,2), Gb = desenfocar(G,w,h,2), Bb = desenfocar(B,w,h,2);
+    const cands = [];
+    // 1) por brillo: la hoja suele ser más clara que el fondo
+    const t = otsu(Lb); cands.push(candidato(Lb.map(v => v > t ? 1 : 0), w, h));
+    // 2) por diferencia con el color del fondo (promedio del marco exterior)
+    const m = Math.max(2, Math.round(Math.min(w,h)*0.03)); let br = 0, bg = 0, bb = 0, n = 0;
+    for (let y = 0; y < h; y++) for (let xx = 0; xx < w; xx++){
+      if (y >= m && y < h-m && xx >= m && xx < w-m) continue;
+      const i = y*w+xx; br += Rb[i]; bg += Gb[i]; bb += Bb[i]; n++; }
+    br /= n; bg /= n; bb /= n;
+    const dist = new Uint8Array(N);
+    for (let i = 0; i < N; i++) dist[i] = Math.min(255, (Math.abs(Rb[i]-br) + Math.abs(Gb[i]-bg) + Math.abs(Bb[i]-bb)) / 1.5);
+    const td = Math.max(18, otsu(dist)); cands.push(candidato(dist.map(v => v > td ? 1 : 0), w, h));
+    // 3) por bordes: gradiente fuerte = contorno; lo que no se alcanza desde el marco es la hoja
+    const Gm = new Uint8Array(N);
+    for (let y = 1; y < h-1; y++) for (let xx = 1; xx < w-1; xx++){
+      const i = y*w+xx;
+      const gx = Lb[i-w+1] + 2*Lb[i+1] + Lb[i+w+1] - Lb[i-w-1] - 2*Lb[i-1] - Lb[i+w-1];
+      const gy = Lb[i+w-1] + 2*Lb[i+w] + Lb[i+w+1] - Lb[i-w-1] - 2*Lb[i-w] - Lb[i-w+1];
+      Gm[i] = Math.min(255, Math.hypot(gx, gy) / 2);
+    }
+    const tg = Math.max(12, otsu(Gm) * 0.6);
+    const borde = morfo(Gm.map(v => v > tg ? 1 : 0), w, h, false);   // engrosa para cerrar huecos
+    const afuera = new Uint8Array(N), cola = new Int32Array(N); let qi = 0, qf = 0;
+    const sembrar = i => { if (!borde[i] && !afuera[i]){ afuera[i] = 1; cola[qf++] = i; } };
+    for (let xx = 0; xx < w; xx++){ sembrar(xx); sembrar((h-1)*w + xx); }
+    for (let y = 0; y < h; y++){ sembrar(y*w); sembrar(y*w + w-1); }
+    while (qi < qf){ const p = cola[qi++], xx = p % w, y = (p/w)|0;
+      if (xx > 0) sembrar(p-1); if (xx < w-1) sembrar(p+1); if (y > 0) sembrar(p-w); if (y < h-1) sembrar(p+w); }
+    cands.push(candidato(afuera.map(v => v ? 0 : 1), w, h));
+    if (window.DEPURAR) console.log("candidatos", JSON.stringify(cands.map(c => c && { q: c.q, p: +c.puntaje.toFixed(3) })));
+    const mejor = cands.filter(Boolean).sort((a,b) => b.puntaje - a.puntaje)[0];
+    if (!mejor) return null;
+    const s = fuente.width / w;
+    // se achica apenas hacia el centro para no dejar una línea del fondo en el borde
+    const cx = mejor.q.reduce((t,p) => t+p[0], 0)/4, cy = mejor.q.reduce((t,p) => t+p[1], 0)/4, f = 0.988;
+    return ordenarEsquinas(mejor.q.map(p => [
+      Math.min(fuente.width,  Math.max(0, (cx + (p[0]-cx)*f) * s)),
+      Math.min(fuente.height, Math.max(0, (cy + (p[1]-cy)*f) * s))]));
+  } catch (e) { return null; }
+}
+
+function dibujarRecorte(){
+  const area = $("#area-recorte"), f = est.fuente;
+  const aw = area.clientWidth - 32, ah = area.clientHeight - 32;
+  const s = Math.min(aw / f.width, ah / f.height);
+  est.escala = s;
+  const cw = Math.round(f.width*s), ch = Math.round(f.height*s);
+  const marco = $("#marco-recorte"); marco.style.width = cw+"px"; marco.style.height = ch+"px";
+  const dpr = window.devicePixelRatio || 1;
+  const cv = $("#cv-recorte"); cv.width = Math.round(cw*dpr); cv.height = Math.round(ch*dpr);
+  const x = cv.getContext("2d"); x.imageSmoothingQuality = "high"; x.drawImage(f, 0, 0, cv.width, cv.height);
+  $("#svg-recorte").setAttribute("viewBox", `0 0 ${f.width} ${f.height}`);
+  actualizarSvg();
+}
+function actualizarSvg(){
+  const f = est.fuente, q = est.esq, s = est.escala;
+  const pts = q.map(p => p.join(",")).join(" ");
+  const r = 13/s, sw = 2.5/s;
+  let h = `<path d="M0 0H${f.width}V${f.height}H0Z M${q.map(p=>p.join(" ")).join(" L")} Z" fill="rgba(0,0,0,.5)" fill-rule="evenodd"/>`;
+  h += `<polygon points="${pts}" fill="rgba(20,184,166,.12)" stroke="#2dd4bf" stroke-width="${sw}"/>`;
+  q.forEach((p,i) => { h += `<circle cx="${p[0]}" cy="${p[1]}" r="${r}" fill="${i===est.arrastre?'#2dd4bf':'rgba(255,255,255,.9)'}" stroke="#0f766e" stroke-width="${sw}"/>`; });
+  $("#svg-recorte").innerHTML = h;
+}
+function aFuente(e){
+  const r = $("#svg-recorte").getBoundingClientRect();
+  return [(e.clientX - r.left) / r.width * est.fuente.width, (e.clientY - r.top) / r.height * est.fuente.height];
+}
+const svgR = $("#svg-recorte");
+svgR.addEventListener("pointerdown", e => {
+  const p = aFuente(e); let mejor = -1, d = Infinity;
+  est.esq.forEach((q,i) => { const dd = Math.hypot(q[0]-p[0], q[1]-p[1]); if (dd < d) { d = dd; mejor = i; } });
+  if (d * est.escala > 60) return;
+  est.arrastre = mejor; est.offset = [est.esq[mejor][0]-p[0], est.esq[mejor][1]-p[1]];
+  svgR.setPointerCapture(e.pointerId); e.preventDefault();
+  actualizarSvg(); dibujarLupa(e);
+});
+svgR.addEventListener("pointermove", e => {
+  if (est.arrastre < 0) return;
+  const p = aFuente(e), f = est.fuente;
+  est.esq[est.arrastre] = [Math.min(f.width, Math.max(0, p[0]+est.offset[0])), Math.min(f.height, Math.max(0, p[1]+est.offset[1]))];
+  actualizarSvg(); dibujarLupa(e);
+});
+const soltar = () => { est.arrastre = -1; $("#lupa").hidden = true; if (est.esq) actualizarSvg(); };
+svgR.addEventListener("pointerup", soltar);
+svgR.addEventListener("pointercancel", soltar);
+
+function dibujarLupa(e){
+  const L = $("#lupa"), area = $("#area-recorte"), ar = area.getBoundingClientRect();
+  L.hidden = false;
+  const izquierda = (e.clientX - ar.left) > ar.width/2;
+  L.style.left = izquierda ? "12px" : ""; L.style.right = izquierda ? "" : "12px";
+  const dpr = window.devicePixelRatio || 1, T = 130;
+  L.width = T*dpr; L.height = T*dpr;
+  const x = L.getContext("2d"); x.scale(dpr,dpr);
+  const q = est.esq[est.arrastre], lado = T / (est.escala*3);
+  x.fillStyle = "#000"; x.fillRect(0,0,T,T);
+  x.drawImage(est.fuente, q[0]-lado/2, q[1]-lado/2, lado, lado, 0, 0, T, T);
+  // bordes del recorte dentro de la lupa
+  const k = T/lado, tx = p => (p[0]-q[0])*k + T/2, ty = p => (p[1]-q[1])*k + T/2;
+  const i = est.arrastre, a = est.esq[(i+3)%4], b = est.esq[(i+1)%4];
+  x.strokeStyle = "#2dd4bf"; x.lineWidth = 2;
+  x.beginPath(); x.moveTo(tx(a),ty(a)); x.lineTo(T/2,T/2); x.lineTo(tx(b),ty(b)); x.stroke();
+  x.strokeStyle = "#fbbf24"; x.lineWidth = 1.5;
+  x.beginPath(); x.moveTo(T/2-12,T/2); x.lineTo(T/2+12,T/2); x.moveTo(T/2,T/2-12); x.lineTo(T/2,T/2+12); x.stroke();
+}
+
+function rotarFuente(sentido){ // 1 = horario, -1 = antihorario
+  const f = est.fuente, w = f.width, h = f.height;
+  const c = document.createElement("canvas"); c.width = h; c.height = w;
+  const x = c.getContext("2d");
+  if (sentido > 0) { x.translate(h,0); x.rotate(Math.PI/2); } else { x.translate(0,w); x.rotate(-Math.PI/2); }
+  x.drawImage(f,0,0);
+  const r = sentido > 0 ? p => [h-p[1], p[0]] : p => [p[1], w-p[0]];
+  const [tl,tr,br,bl] = est.esq.map(r);
+  est.esq = sentido > 0 ? [bl,tl,tr,br] : [tr,br,bl,tl];
+  est.fuente = c; dibujarRecorte();
+}
+$("#rot-der").onclick = () => rotarFuente(1);
+$("#rot-izq").onclick = () => rotarFuente(-1);
+$("#hoja-completa").onclick = () => { esquinasDefecto(0); actualizarSvg(); };
+$("#auto-bordes").onclick = () => {
+  const q = detectarBordes(est.fuente);
+  if (q){ est.esq = q; actualizarSvg(); aviso("Hoja detectada"); } else aviso("No se detectó la hoja: ajustá las esquinas a mano");
+};
+$("#recorte-cancelar").onclick = () => { est.fuente = null; siguienteEnCola(); };
+window.addEventListener("resize", () => { if (!$("#v-recorte").hidden && est.fuente) dibujarRecorte(); });
+
+function ordenarEsquinas(q){
+  const cx = q.reduce((s,p)=>s+p[0],0)/4, cy = q.reduce((s,p)=>s+p[1],0)/4;
+  const o = [...q].sort((a,b) => Math.atan2(a[1]-cy,a[0]-cx) - Math.atan2(b[1]-cy,b[0]-cx));
+  let k = 0; o.forEach((p,i) => { if (p[0]+p[1] < o[k][0]+o[k][1]) k = i; });
+  return [...o.slice(k), ...o.slice(0,k)];
+}
+
+$("#recorte-ok").onclick = async () => {
+  ocupado("Enderezando la hoja…"); await respiro();
+  try {
+    est.esq = ordenarEsquinas(est.esq);
+    est.recorte = enderezar(est.fuente, est.esq);
+    est.cache = {};
+    libre(); mostrar("filtro"); await verFiltro(est.filtro);
+  } catch (e) { libre(); aviso("Error al procesar: " + e.message); }
+};
+
+/* ================= perspectiva (homografía) ================= */
+function resolver(A, B){
+  const n = B.length;
+  for (let c = 0; c < n; c++){
+    let p = c; for (let r = c+1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+    [A[c],A[p]] = [A[p],A[c]]; [B[c],B[p]] = [B[p],B[c]];
+    const piv = A[c][c] || 1e-12;
+    for (let r = 0; r < n; r++){
+      if (r === c) continue;
+      const f = A[r][c] / piv; if (!f) continue;
+      for (let k = c; k < n; k++) A[r][k] -= f*A[c][k];
+      B[r] -= f*B[c];
+    }
+  }
+  return B.map((b,i) => b / (A[i][i] || 1e-12));
+}
+function homografia(de, a){ // H tal que a = H(de)
+  const A = [], B = [];
+  for (let i = 0; i < 4; i++){
+    const [x,y] = de[i], [u,v] = a[i];
+    A.push([x,y,1,0,0,0,-u*x,-u*y]); B.push(u);
+    A.push([0,0,0,x,y,1,-v*x,-v*y]); B.push(v);
+  }
+  return resolver(A, B);
+}
+function enderezar(src, q){
+  const [tl,tr,br,bl] = q, d = (a,b) => Math.hypot(a[0]-b[0], a[1]-b[1]);
+  let W = Math.max(d(tl,tr), d(bl,br)), H = Math.max(d(tl,bl), d(tr,br));
+  const k = Math.min(1, MAX_LADO / Math.max(W,H));
+  W = Math.max(2, Math.round(W*k)); H = Math.max(2, Math.round(H*k));
+  const [a,b,c,dd,e,f,g,h] = homografia([[0,0],[W,0],[W,H],[0,H]], q);
+  const sw = src.width, sh = src.height;
+  const sd = src.getContext("2d").getImageData(0,0,sw,sh).data;
+  const out = document.createElement("canvas"); out.width = W; out.height = H;
+  const ox = out.getContext("2d"), od = ox.createImageData(W,H), o = od.data;
+  const maxU = sw - 1.001, maxV = sh - 1.001, fila = sw*4;
+  let i = 0;
+  for (let y = 0; y < H; y++){
+    const yy = y + 0.5;
+    for (let x = 0; x < W; x++, i += 4){
+      const xx = x + 0.5, den = g*xx + h*yy + 1;
+      let u = (a*xx + b*yy + c)/den - 0.5, v = (dd*xx + e*yy + f)/den - 0.5;
+      if (u < 0) u = 0; else if (u > maxU) u = maxU;
+      if (v < 0) v = 0; else if (v > maxV) v = maxV;
+      const x0 = u|0, y0 = v|0, fx = u - x0, fy = v - y0;
+      const p = (y0*sw + x0)*4, p2 = p + fila;
+      for (let ch = 0; ch < 3; ch++){
+        const s1 = sd[p+ch] + (sd[p+4+ch] - sd[p+ch])*fx;
+        const s2 = sd[p2+ch] + (sd[p2+4+ch] - sd[p2+ch])*fx;
+        o[i+ch] = s1 + (s2 - s1)*fy;
+      }
+      o[i+3] = 255;
+    }
+  }
+  ox.putImageData(od,0,0);
+  return out;
+}
+
+/* ================= filtros ================= */
+function integral(L, w, h){
+  const W1 = w+1, I = new Uint32Array(W1*(h+1));
+  for (let y = 0; y < h; y++){
+    let s = 0; const fy = y*w, f1 = (y+1)*W1, f0 = y*W1;
+    for (let x = 0; x < w; x++){ s += L[fy+x]; I[f1+x+1] = I[f0+x+1] + s; }
+  }
+  return I;
+}
+function aplicarFiltro(src, tipo){
+  const w = src.width, h = src.height;
+  const out = document.createElement("canvas"); out.width = w; out.height = h;
+  const ox = out.getContext("2d");
+  if (tipo === "original"){ ox.drawImage(src,0,0); return out; }
+  const img = src.getContext("2d").getImageData(0,0,w,h), D = img.data;
+  const L = new Uint8Array(w*h);
+  for (let i = 0, j = 0; j < L.length; i += 4, j++) L[j] = (D[i]*77 + D[i+1]*150 + D[i+2]*29) >> 8;
+  const I = integral(L, w, h), W1 = w+1;
+  const r = tipo === "bn" ? Math.max(8, Math.round(Math.max(w,h)/40)) : Math.max(12, Math.round(Math.max(w,h)/10));
+  for (let y = 0; y < h; y++){
+    const y0 = Math.max(0, y-r), y1 = Math.min(h, y+r+1);
+    for (let x = 0; x < w; x++){
+      const x0 = Math.max(0, x-r), x1 = Math.min(w, x+r+1);
+      const m = (I[y1*W1+x1] - I[y0*W1+x1] - I[y1*W1+x0] + I[y0*W1+x0]) / ((x1-x0)*(y1-y0));
+      const j = y*w + x, i = j*4;
+      if (tipo === "bn"){
+        const v = L[j] < m*0.86 ? 0 : 255;
+        D[i] = D[i+1] = D[i+2] = v;
+      } else {
+        const ref = m > 1 ? m : 1;
+        if (tipo === "grises"){
+          const v = (L[j]/ref*255 - 55) * 1.3;
+          D[i] = D[i+1] = D[i+2] = v;
+        } else {
+          for (let c = 0; c < 3; c++) D[i+c] = (D[i+c]/ref*255 - 45) * 1.25;
+        }
+      }
+    }
+  }
+  ox.putImageData(img,0,0);
+  return out;
+}
+async function verFiltro(tipo){
+  est.filtro = tipo;
+  document.querySelectorAll("#filtros .chip").forEach(b => b.classList.toggle("activo", b.dataset.f === tipo));
+  if (!est.cache[tipo]){ ocupado("Aplicando filtro…"); await respiro(); est.cache[tipo] = aplicarFiltro(est.recorte, tipo); libre(); }
+  const c = est.cache[tipo], p = $("#prev-filtro");
+  p.width = c.width; p.height = c.height; p.getContext("2d").drawImage(c,0,0);
+}
+$("#filtros").onclick = e => { const b = e.target.closest(".chip"); if (b) verFiltro(b.dataset.f); };
+$("#filtro-volver").onclick = () => { mostrar("recorte"); dibujarRecorte(); };
+$("#filtro-ok").onclick = () => {
+  const c = est.cache[est.filtro];
+  est.paginas.push({ url: c.toDataURL("image/jpeg", 0.88), w: c.width, h: c.height });
+  est.fuente = est.recorte = null; est.cache = {};
+  aviso(`Página ${est.paginas.length} guardada`);
+  siguienteEnCola();
+};
+
+/* ================= PDF ================= */
+async function generarPDF(){
+  await cargarScript(URL_JSPDF);
+  const { jsPDF } = window.jspdf, a4 = $("#pdf-tam").value === "a4";
+  let doc = null;
+  for (const p of est.paginas){
+    const vert = p.h >= p.w;
+    if (a4){
+      const PW = vert ? 210 : 297, PH = vert ? 297 : 210;
+      const o = vert ? "portrait" : "landscape";
+      if (!doc) doc = new jsPDF({ unit:"mm", format:"a4", orientation:o }); else doc.addPage("a4", o);
+      const k = Math.min(PW/p.w, PH/p.h), w = p.w*k, h = p.h*k;
+      doc.addImage(p.url, "JPEG", (PW-w)/2, (PH-h)/2, w, h, undefined, "FAST");
+    } else {
+      const w = p.w*0.75, h = p.h*0.75; // px → pt aprox. a 96 ppp
+      const o = vert ? "portrait" : "landscape";
+      if (!doc) doc = new jsPDF({ unit:"pt", format:[w,h], orientation:o }); else doc.addPage([w,h], o);
+      doc.addImage(p.url, "JPEG", 0, 0, w, h, undefined, "FAST");
+    }
+  }
+  return doc.output("blob");
+}
+function nombrePDF(){ return ($("#pdf-nombre").value.trim() || hoy()).replace(/[\\/:*?"<>|]+/g,"_"); }
+$("#btn-pdf").onclick = () => {
+  $("#pdf-nombre").value = hoy();
+  try { $("#pdf-compartir").hidden = !(navigator.canShare && navigator.canShare({ files:[new File(["x"],"a.pdf",{type:"application/pdf"})] })); } catch { $("#pdf-compartir").hidden = true; }
+  $("#dlg-pdf").showModal();
+};
+$("#pdf-cerrar").onclick = () => $("#dlg-pdf").close();
+$("#pdf-bajar").onclick = async () => {
+  $("#dlg-pdf").close(); ocupado("Armando el PDF…"); await respiro();
+  try {
+    const blob = await generarPDF(), url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = nombrePDF() + ".pdf";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    aviso("PDF descargado");
+  } catch (e) { aviso("No se pudo crear el PDF (¿hay conexión para cargar la librería?)"); }
+  libre();
+};
+$("#pdf-compartir").onclick = async () => {
+  $("#dlg-pdf").close(); ocupado("Armando el PDF…"); await respiro();
+  try {
+    const blob = await generarPDF(), nombre = nombrePDF();
+    libre();
+    await navigator.share({ files: [new File([blob], nombre + ".pdf", { type:"application/pdf" })], title: nombre });
+  } catch (e) { libre(); if (e.name !== "AbortError") aviso("No se pudo compartir"); }
+};
+
+/* ================= OCR ================= */
+$("#btn-ocr").onclick = async () => {
+  ocupado("Cargando el reconocedor de texto…", true);
+  let worker;
+  try {
+    await cargarScript(URL_TESS);
+    let actual = 0; const total = est.paginas.length;
+    worker = await Tesseract.createWorker("spa", 1, {
+      logger: m => {
+        if (m.status === "recognizing text") {
+          progreso((actual + m.progress) / total);
+          $("#ocupado-msg").textContent = `Leyendo página ${actual+1} de ${total}…`;
+        } else if (actual === 0 && m.status) {
+          $("#ocupado-msg").textContent = "Preparando idioma español… (la primera vez tarda más)";
+        }
+      }
+    });
+    const partes = [];
+    for (; actual < total; actual++){
+      const { data } = await worker.recognize(est.paginas[actual].url);
+      partes.push(total > 1 ? `--- Página ${actual+1} ---\n${data.text.trim()}` : data.text.trim());
+    }
+    $("#txt-salida").value = partes.join("\n\n");
+    libre(); mostrar("texto");
+  } catch (e) {
+    libre(); aviso("No se pudo reconocer el texto (se necesita conexión la primera vez).");
+  } finally { if (worker) worker.terminate(); }
+};
+$("#txt-copiar").onclick = async () => {
+  try { await navigator.clipboard.writeText($("#txt-salida").value); aviso("Texto copiado"); }
+  catch { $("#txt-salida").select(); document.execCommand("copy"); aviso("Texto copiado"); }
+};
+$("#txt-bajar").onclick = () => {
+  const b = new Blob([$("#txt-salida").value], { type:"text/plain;charset=utf-8" }), u = URL.createObjectURL(b);
+  const a = document.createElement("a"); a.href = u; a.download = hoy() + ".txt"; a.click();
+  setTimeout(() => URL.revokeObjectURL(u), 60000);
+};
+$("#txt-volver").onclick = () => mostrar("inicio");
+
+/* ================= varios ================= */
+$("#btn-vaciar").onclick = () => { if (confirm("¿Borrar todas las páginas?")) { est.paginas = []; renderPaginas(); } };
+window.addEventListener("beforeunload", e => { if (est.paginas.length) { e.preventDefault(); e.returnValue = ""; } });
+renderPaginas();
+</script>
+</body>
+</html>
